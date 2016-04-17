@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bricker</title>
+  <style>
+    .font {
+      font-family: Helvetica, sans-serif;
+      font-weight: lighter;
+      text-align: center;
+      color: white;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background-image: url("wallpaper.jpg");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    #content {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #toolbar {
+      width: 708px;
+      height: 30px;
+      background-color: #005ef8;
+      background-image: linear-gradient(to bottom, #3B93FE, #005ef8 20%);
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+
+    #toolbar #x {
+      background-color: #D2441C;
+      color: white;
+      float: right;
+      height: 24px;
+      line-height: 24px;
+      font-size: 1em;
+      width: 24px;
+      margin: 2px 4px;
+      border: solid white 0.5px;
+      border-radius: 3px;
+      background-image: radial-gradient(circle at top left, #ee9a85, #D2441C);
+    }
+
+    #toolbar #span_text {
+      float: left;
+      height: 30px;
+      line-height: 30px;
+      margin-left: 5px;
+    }
+
+    #game_content {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+    }
+
+    #content_text {
+      background-color: grey;
+      width: 250px;
+      height: 600px;
+      border: solid #005ef8 2px;
+      border-bottom-left-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+    }
+
+    canvas {
+      background-color: white;
+      border: solid #005ef8 2px;
+      border-bottom-right-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <!--container for the content in the middle of page-->
+  <div id="content">
+    <!--div to make the content looks like its from windows XP hehe :) -->
+    <div id="toolbar"><span id="span_text" class="font">Bricker.exe</span><span id="x" class="font">x</span></div>
+    <!--container for the scores and title of game-->
+    <div id="game_content">
+      <div id="content_text">
+        <!--text content-->
+        <h1 class="font">Bricker</h1>
+        <h2 class="font">Current Score:</h2>
+        <h3 id="currScore" class="font"></h3>
+        <p class="font"><b>Instructions:</b> To start the game, press the "enter/return" key.<br><br> You can also pause the game using the "enter/return" key again.<br><br> Use right and left arrow keys to move the bar at the bottom of the game screen.<br><br> Use the ball to break bricks and get points.<br><br> Do not let the ball fall below the bar.</p>
+      </div>
+
+      <!--game content-->
+      <canvas id="game" width="450" height="600">This browser does not support canvas.</canvas>
+    </div>
+
+    <!--JavaScript Content-->
+    <script>
+      var canvas = document.getElementById("game");
+      var ctx = canvas.getContext("2d");
+
+      //score for the game
+      var score = 0;
+
+      //game start and also pause
+      var isGameStarted = false;
+      var pause = true;
+
+      //THE BALL
+      //starting position for the ball
+      var x = canvas.width/2;
+      var y = canvas.height - 30;
+
+      //speed of the ball in x direction and y direction
+      var dx = 2;
+      var dy = -2;
+
+      //the radius of the ball for calculations
+      var ballRadius = 10;
+
+      //THE BAR
+      //bar dimensions
+      var barHeight = 10;
+      var barWidth = 100;
+
+      //starting location for bar
+      var barX = (canvas.width-barWidth)/2;
+
+      //flags for movement of the bar
+      var rightP = false;
+      var leftP = false;
+
+      //THE BRICKS
+      //defining the rows, columns, and the dimensions of the BRICKS
+      var brickRowCount = 5;
+      var brickColumnCount = 4;
+      var brickWidth = 75;
+      var brickHeight = 20;
+      var brickPadding = 13;
+      var brickOffsetTop = 30;
+      var brickOffsetLeft = 60;
+      var gridSize = 0;
+
+      //setting up a two dimensional array
+      var bricks = [];
+      for (c = 0; c < brickColumnCount; c++) {
+        bricks[c] = [];
+        for (r = 0; r < brickRowCount; r++) {
+          bricks[c][r] = {x: 0, y: 0, status: 1};
+        }
+      }
+
+      //drawing the ball
+      function drawBall() {
+        ctx.beginPath();
+        ctx.arc(x, y, ballRadius, 0, Math.PI*2);
+        ctx.fillStyle = "orange";
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      //drawing the bar
+      function drawBar() {
+        ctx.beginPath();
+        ctx.rect(barX, canvas.height-barHeight, barWidth, barHeight);
+        ctx.fillStyle = "grey";
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      //drawing the bricks
+      function drawBricks() {
+        for (c = 0; c < brickColumnCount; c++) {
+          for (r = 0; r < brickRowCount; r++) {
+            //checking if it hasnt been hit yet
+            if(bricks[c][r].status == 1) {
+              //find coordinates of the brick where to begin drawing
+              //x coordinate
+              var brickX = (c*(brickWidth+brickPadding))+brickOffsetLeft;
+              //y coordinate
+              var brickY = (r*(brickHeight+brickPadding))+brickOffsetTop;
+              bricks[c][r].x = brickX;
+              bricks[c][r].y = brickY;
+
+              //draw individual brick
+              ctx.beginPath();
+              ctx.rect(brickX, brickY, brickWidth, brickHeight);
+              ctx.fillStyle = "grey";
+              ctx.fill();
+              ctx.closePath();
+            }
+          }
+        }
+      }
+
+      //going through each brick and checking their conditions
+      function collisionDetection() {
+        for(c = 0; c < brickColumnCount; c++) {
+            for(r = 0; r < brickRowCount; r++) {
+                //checking the status of an individual brick
+                var b = bricks[c][r];
+                if(b.status == 1) {
+                    if(x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight) {
+                        dy = -dy;
+                        b.status = 0;
+                        score++;
+                        gridSize++;
+                        //checking for completion of the brick grid
+                        if (gridSize == brickRowCount * brickColumnCount) {
+
+                          //the game will refresh the bricks but differently each time
+                          //randomizers
+                          brickRowCount = Math.floor((Math.random() * 7) + 1);
+                          brickColumnCount = Math.floor((Math.random() * 4) + 1);
+
+                          //refreshing the gridsize variable
+                          gridSize = 0;
+
+                          //this speeds up the ball up each level
+                          dy -= 0.5;
+                          dx -= 0.5;
+
+                          //creating the bricks
+                          for (i = 0; i < brickColumnCount; i++) {
+                            bricks[i] = [];
+                            for (j = 0; j < brickRowCount; j++) {
+                              bricks[i][j] = {x: 0, y: 0, status: 1};
+                            }
+                          }
+                        }
+                    }
+                }
+            }
+        }
+      }
+
+      //keeps the score
+      function keepScore() {
+        document.getElementById('currScore').innerText = score;
+      }
+
+      //drawing the objects in the game over and over again
+      function draw() {
+        //checking for if the user has already begun the game and is not paused
+        if (isGameStarted && pause == false) {
+          //Clearing the game area before rendering the new position of objects
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          drawBricks();
+          drawBall();
+          drawBar();
+          keepScore();
+          collisionDetection();
+
+          //moving the ball to a new location
+          x += dx;
+          y += dy;
+
+          //collision detection with the walls
+          //for if the ball hits the side walls minus the ball radius so that the collision looks more realistic
+          //this causes the ball to move in opposite direction
+          if(x + dx > canvas.width-ballRadius || x + dx < ballRadius) {
+          dx = -dx;
+          }
+
+          //same applies here, except the ball hitting the top or bottom for now (bottom will change, due to the bar)
+          if(y + dy < ballRadius) {
+              dy = -dy;
+          }
+          //if the ball has hit the bottom wall
+          else if(y + dy > canvas.height-ballRadius) {
+            //checking for bar hit
+            if(x > barX && x < barX + barWidth) {
+              dy = -dy;
+            }
+            //outputting in case of loss
+            else {
+              alert("you lost! Your score was: " + score);
+              document.location.reload();
+            }
+          }
+
+          //checking for if bar is within canvas and then moving accordingly
+          if(rightP && barX < canvas.width-barWidth) {
+            barX += 7;
+          }
+          else if(leftP && barX > 0) {
+              barX -= 7;
+          }
+        }
+      }
+
+      //event listeners for the key presses
+      document.addEventListener("keydown", keyDownHandler, false);
+      document.addEventListener("keyup", keyUpHandler, false);
+
+      //handlers for the key presses
+      function keyDownHandler(e) {
+          if(e.keyCode == 39) {
+              rightP = true;
+          }
+          else if(e.keyCode == 37) {
+              leftP = true;
+          }
+          //checking for the enter key press to start the game and also to pause
+          else if (e.keyCode == 13) {
+            if (pause) {
+              isGameStarted = true;
+              pause = false;
+            }
+            else {
+              isGameStarted = false;
+              pause = true;
+            }
+          }
+      }
+
+      function keyUpHandler(e) {
+          if(e.keyCode == 39) {
+              rightP = false;
+          }
+          else if(e.keyCode == 37) {
+              leftP = false;
+          }
+      }
+
+      //refreshes the canvas every ten milliseconds
+      setInterval(draw, 10);
+
+    </script>
+  </div>
+</body>
+</html>
