@@ -1,7 +1,7 @@
 # Bricker Game
 
 <b>Note:</b> The game is going to be hosted online for others to play with, as it is a very fun game. The link is: http://www.bricker.dx.am
-The game will only work on chrome and firefox for now. 
+The game should work for most browsers.
 
 As a break from my geesePatrol website, I decided to work with the canvas element in JavaScript to create a score oriented breakout game for people to play.
 
